@@ -1,2 +1,2 @@
 # Prestigious
-A basic fun Discord bot.
+A basic multi-purpose Discord bot.
