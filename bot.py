@@ -300,7 +300,8 @@ async def irlist(interaction: discord.Interaction):
     for row in lookup:
         group = await bot.db.fetchrow("SELECT * FROM irgroups WHERE grid = $1", row["grid"])
         role = discord.utils.get(interaction.guild.roles, id=row["rid"])
-        embed.add_field(name=f"{role.name} - {group['gname']}", value=f"This interaction role belongs to `{group['gname']}`.", inline=False)
+        if role:
+            embed.add_field(name=f"{role.name} - {group['gname']}", value=f"This interaction role belongs to `{group['gname']}`.", inline=False)
     
 @apptree.command(description="Opens a public IR panel.", guild=discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group to open.", description="The description of the panel.")
@@ -312,9 +313,19 @@ async def iropen(interaction: discord.Interaction, group: int, description: str 
         return await interaction.followup.send(embed=embed) 
     
     irroles = await bot.db.fetch("SELECT * FROM irroles WHERE grid = $1", group["grid"])
+    for row in irroles:
+        roleverify = discord.utils.get(interaction.guild.roles, id=row["rid"])
+        if not roleverify:
+            await bot.db.execute("DELETE FROM irroles WHERE grid = $1 AND rid = $2", group["grid"], row["rid"])
+            irroles.remove(row)
+            lostarole = True
     msg = await interaction.channel.send(embed=discord.Embed(title=str(group['gname']), description="Press a button to get the corresponding role." if not description else description, color=bot.accent), view=InteractionRoles(interaction.guild, irroles))
     await bot.db.execute("INSERT INTO irpanels (msgid, grid, gid) VALUES ($1, $2, $3)", msg.id, group["grid"], interaction.guild.id)
-    await interaction.followup.send(embed=discord.Embed(title="IR panel opened", description=f"The IR panel for {group['gname']} has been opened. Feel free to delete this message.", color=bot.success))
+    if lostarole:
+        await interaction.followup.send(embed=discord.Embed(title="IR panel opened", description=f"**:warning: WARNING: Some role(s) is missing and will not be added to the panel. We deleted the IR role for you.**\n\nThe IR panel for {group['gname']} has been opened. Feel free to delete this message.", color=bot.success))
+    else:
+        await interaction.followup.send(embed=discord.Embed(title="IR panel opened", description=f"The IR panel for {group['gname']} has been opened. Feel free to delete this message.", color=bot.success))
+
 
 # @apptree.command(description="Fills this server's form, if any.", guild=discord.Object(id=956522017983725588))
 # async def serverform(interaction: discord.Interaction):
