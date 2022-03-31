@@ -24,23 +24,39 @@ load_dotenv()
 
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
+def errortofriendly(error):
+    error = str(error)
+    if error.startswith("403"):
+        return "Prestigious doesn't have the permissions to do the following actions. Please contact a moderator."
+    elif error.startswith("404"):
+        return "The requested resource was not found. Please contact a moderator."
+    return f"An unexpected error has occured. Join Prestigious' support server for more information.\n\n{error}"
+
 class IRRoleButton(discord.ui.Button["InteractionRoles"]):
         def __init__(self, role: discord.Role):
-            super().__init__(style=discord.ButtonStyle.primary, label=role.name, custom_id=str(role.id))
+            if role:
+                super().__init__(style=discord.ButtonStyle.primary, label=role.name, custom_id=str(role.id))
+            else:
+                super().__init__(style=discord.ButtonStyle.danger, label="Role not found", custom_id=str(random.randint(1, 999999999999)))
             # role = discord.utils.get(interaction.guild.roles, id=id)
             self.role = role
         
         async def callback(self, interaction: discord.Interaction):
-            try:
-                if not self.role in interaction.user.roles:
-                    await interaction.user.add_roles(self.role)
-                    embed = discord.Embed(title="Role added", description=f"You have been given the role {self.role.name}.", color=bot.success)
-                else:
-                    await interaction.user.remove_roles(self.role)
-                    embed = discord.Embed(title="Role removed", description=f"You have been removed from the role {self.role.name}.", color=bot.success)
-            except Exception as e:
-                embed = discord.Embed(title="Something went wrong", description=f"Contact the server administrator.", color=bot.error)
+            if self.role:
+                try:
+                    if not self.role in interaction.user.roles:
+                        await interaction.user.add_roles(self.role)
+                        embed = discord.Embed(title="Role added", description=f"You have been given the role {self.role.name}.", color=bot.success)
+                    else:
+                        await interaction.user.remove_roles(self.role)
+                        embed = discord.Embed(title="Role removed", description=f"You have been removed from the role {self.role.name}.", color=bot.success)
+                except Exception as e:
+                    embed = discord.Embed(title="Something went wrong", description=f"Contact the server administrator.\n\n```{errortofriendly(e)}```", color=bot.error)
+            else:
+                embed = discord.Embed(title="Something went wrong", description="Contact the server administrator.\n\n```The requested resource was not found. Please contact a moderator.```", color=bot.error)
+
             await interaction.response.send_message(embed=embed, ephemeral=True)
+                        
     
 class InteractionRoles(discord.ui.View):
     def __init__(self, guild: discord.Guild, irroles: list):
@@ -48,8 +64,9 @@ class InteractionRoles(discord.ui.View):
 
         for button in irroles:
             role = discord.utils.get(guild.roles, id=button["rid"])
-            if role:
-                self.add_item(IRRoleButton(role)) 
+            self.add_item(IRRoleButton(role)) 
+            
+
 
 activity = discord.Activity(name='the world burn :)', type=discord.ActivityType.watching)
 intents = discord.Intents.all()
@@ -108,36 +125,24 @@ async def on_ready():
     #         guild = bot.get_guild(panel["gid"])
     #         bot.add_view(InteractionRoles(guild, rolelookup), message_id=panel['msgid'])
 
-
 @bot.command()
 async def ping(ctx):
     await ctx.send(f'Pong! {round(bot.latency * 1000)}ms')
 
-@bot.command()
-async def help(ctx):
+@apptree.command(description="Shows available commands.", guild=discord.Object(id=956522017983725588))
+async def help(interaction: discord.Interaction):
     embed = discord.Embed(title="Help", description="", color=bot.accent)
-    embed.add_field(name="pr help", value="Shows this message", inline=False)
-    await ctx.send(embed=embed)    
+    embed.add_field(name="pr ping", value="Shows latency of the bot.", inline=False)
+    for command in apptree.get_commands(guild=discord.Object(id=956522017983725588)):
+        embed.add_field(name=f"/{command.name}", value=command.description, inline=False)
+    await interaction.response.send_message(embed=embed)    
 
 @bot.command()
+@commands.is_owner()
 async def sync(ctx):
     msg = await ctx.send("Syncing...")
     await apptree.sync(guild=discord.Object(id=ctx.guild.id))
     await msg.edit(content="Synced!", delete_after=5)
-
-@bot.command()
-async def addviewss(ctx):
-    msg = await ctx.send("Adding...")
-    conn = await bot.db.acquire()
-    lookup = await conn.fetch("SELECT * FROM irpanels")
-
-    for panel in lookup:
-        conn2 = await bot.db.acquire()
-        rolelookup = await conn2.fetch("SELECT * FROM irroles WHERE grid = $1", panel["grid"])
-        print(panel["gid"])
-        guild = bot.get_guild(panel["gid"])
-        bot.add_view(InteractionRoles(guild, rolelookup), message_id=panel['msgid'])
-    await msg.edit(content="Added!", delete_after=5)
 
 @apptree.command(description="Determine a text's sentiment.", guild=discord.Object(id=956522017983725588))
 @app_commands.describe(text="The text to analyze.")
@@ -160,6 +165,14 @@ async def sentiment(interaction: discord.Interaction, text: str):
     
     embed = discord.Embed(title="Sentiment Analysis", description=f"The text `{text}` has been determined as: `{convert(data['label'])}`.", color=bot.accent)
     await interaction.followup.send(embed=embed)
+
+@apptree.command(description="Shows information about Interaction roles.", guild=discord.Object(id=956522017983725588))
+async def ir(interaction: discord.Interaction):
+    embed = discord.Embed(title="Interaction roles", description="Interaction roles lets your user to get roles for others to see. This can be used to identify your user's preferences or be used for verifications.", color=bot.accent)
+    embed.add_field(name="How to get started", value="Here's a step by step tutorial on how to use Interaction roles.\n\n1. Create a group to add and contain Interaction roles in (using /irnewgroup).\n\n2. See all your groups for later use (using /irgroups). You will see all the groups you have made with an **ID** next to it.\n\n3. Create a role for the group (using /irnew) using the Group ID of your group.\n\n4. Open a panel for your group. This panel can be used by anyone to get roles from.\n\n5. Complete!")
+    await interaction.response.send_message(embed=embed)
+
+
 
 @apptree.command(description="Views all IR groups for this server.", guild=discord.Object(id=956522017983725588))
 async def irgroups(interaction: discord.Interaction):
@@ -210,17 +223,18 @@ async def irnewgroup(interaction: discord.Interaction, name: str):
 @apptree.command(description="Deletes an IR group.", guild=discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group.")
 async def irdelgroup(interaction: discord.Interaction, group: int):
-    await interaction.response.defer
+    await interaction.response.defer()
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
-    lookup = await bot.db.fetchrow("SELECT * FROM irgroups WHERE id = $1", group)
+    lookup = await bot.db.fetchrow("SELECT * FROM irgroups WHERE grid = $1", group)
     if not lookup:
         embed = discord.Embed(title="IR group not found", description="There is no IR group with that ID.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("DELETE FROM irgroups WHERE grid = $1", group)
+    await bot.db.execite("DELETE FROM irroles WHERE grid = $1", group)
     embed = discord.Embed(title="IR group deleted", description="The IR group has been deleted.", color=bot.success)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
@@ -289,8 +303,8 @@ async def irlist(interaction: discord.Interaction):
         embed.add_field(name=f"{role.name} - {group['gname']}", value=f"This interaction role belongs to `{group['gname']}`.", inline=False)
     
 @apptree.command(description="Opens a public IR panel.", guild=discord.Object(id=956522017983725588))
-@app_commands.describe(group="The ID of the group to open.")
-async def iropen(interaction: discord.Interaction, group: int):
+@app_commands.describe(group="The ID of the group to open.", description="The description of the panel.")
+async def iropen(interaction: discord.Interaction, group: int, description: str = None):
     await interaction.response.defer()
     group = await bot.db.fetchrow("SELECT * FROM irgroups WHERE grid = $1", group)
     if not group:
@@ -298,7 +312,7 @@ async def iropen(interaction: discord.Interaction, group: int):
         return await interaction.followup.send(embed=embed) 
     
     irroles = await bot.db.fetch("SELECT * FROM irroles WHERE grid = $1", group["grid"])
-    msg = await interaction.channel.send(embed=discord.Embed(title=str(group['gname']), description="Press a button to get the corresponding role.", color=bot.accent), view=InteractionRoles(interaction.guild, irroles))
+    msg = await interaction.channel.send(embed=discord.Embed(title=str(group['gname']), description="Press a button to get the corresponding role." if not description else description, color=bot.accent), view=InteractionRoles(interaction.guild, irroles))
     await bot.db.execute("INSERT INTO irpanels (msgid, grid, gid) VALUES ($1, $2, $3)", msg.id, group["grid"], interaction.guild.id)
     await interaction.followup.send(embed=discord.Embed(title="IR panel opened", description=f"The IR panel for {group['gname']} has been opened. Feel free to delete this message.", color=bot.success))
 
