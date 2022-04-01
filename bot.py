@@ -216,7 +216,7 @@ async def irnewgroup(interaction: discord.Interaction, name: str):
         return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("INSERT INTO irgroups (gid, gname, grid) VALUES ($1, $2, $3)", interaction.guild.id, name, randomid)
-    embed = discord.Embed(title="IR group created", description=f"The IR group {name} has been created. Start adding roles by using /newir", color=bot.success)
+    embed = discord.Embed(title="IR group created", description=f"The IR group {name} has been created. Start adding roles by using /irnew", color=bot.success)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -234,7 +234,7 @@ async def irdelgroup(interaction: discord.Interaction, group: int):
         return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("DELETE FROM irgroups WHERE grid = $1", group)
-    await bot.db.execite("DELETE FROM irroles WHERE grid = $1", group)
+    await bot.db.execute("DELETE FROM irroles WHERE grid = $1", group)
     embed = discord.Embed(title="IR group deleted", description="The IR group has been deleted.", color=bot.success)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
@@ -312,6 +312,7 @@ async def iropen(interaction: discord.Interaction, group: int, description: str 
         embed = discord.Embed(title="IR group not found", description=f"An IR group with the ID `{group}` does not exist.", color=bot.error)
         return await interaction.followup.send(embed=embed) 
     
+    lostarole = False
     irroles = await bot.db.fetch("SELECT * FROM irroles WHERE grid = $1", group["grid"])
     for row in irroles:
         roleverify = discord.utils.get(interaction.guild.roles, id=row["rid"])
