@@ -160,6 +160,13 @@ async def sync(ctx):
 
 @bot.command()
 @commands.is_owner()
+async def globalsync(ctx):
+    msg = await ctx.send("Syncing...")
+    await apptree.sync()
+    await msg.edit(content="Synced! Should be up in an hour or two.", delete_after=5)
+
+@bot.command()
+@commands.is_owner()
 async def reload(ctx):
     msg = await ctx.send("Reloading...")
     try:
@@ -193,13 +200,13 @@ async def sentiment(interaction: discord.Interaction, text: str):
     await interaction.followup.send(embed=embed)
 
 @apptree.command(description="Shows information about Click-for-infos.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def cfi(interaction: discord.Interaction):
     embed = discord.Embed(title="Click-for-info", description="Click-for-info (CFI for short) allows users to get information by just a click of a button. To see a list of available CFI commands, type /cfi", color=bot.accent)
     await interaction.response.send_message(embed=embed)
 
 @apptree.command(description="Views all CFI groups for this server.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def cfigroups(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
@@ -222,7 +229,7 @@ async def cfigroups(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @apptree.command(description="Creates a new CFI group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(name="The name of the group.")
 async def cfinewgroup(interaction: discord.Interaction, name: str):
     if not interaction.user.guild_permissions.manage_guild:
@@ -240,7 +247,7 @@ async def cfinewgroup(interaction: discord.Interaction, name: str):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @apptree.command(description="Adds a new CFI button to a group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the group.", label="The label of the button.", onclick="The information that will be displayed on click.")
 async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick: str):
     await interaction.response.defer()
@@ -264,7 +271,7 @@ async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick:
     await interaction.followup.send(embed=embed, ephemeral=True)
     
 @apptree.command(description="Lists all CFI buttons in a group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def cfilist(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
@@ -286,7 +293,7 @@ async def cfilist(interaction: discord.Interaction):
 
 
 @apptree.command(description="Deletes a CFI group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the group.")
 async def cfidelgroup(interaction: discord.Interaction, id: int):
     if not interaction.user.guild_permissions.manage_guild:
@@ -304,7 +311,7 @@ async def cfidelgroup(interaction: discord.Interaction, id: int):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @apptree.command(description="Deletes a CFI button.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the button.")
 async def cfidel(interaction: discord.Interaction, id: int):
     if not interaction.user.guild_permissions.manage_guild:
@@ -321,7 +328,7 @@ async def cfidel(interaction: discord.Interaction, id: int):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @apptree.command(description="Opens a CFI panel.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the CFI group to open.", description="The description of the message.")
 async def cfiopen(interaction: discord.Interaction, id: int, description: str = None):
     await interaction.response.defer()
@@ -336,14 +343,14 @@ async def cfiopen(interaction: discord.Interaction, id: int, description: str = 
     await interaction.followup.send(embed=discord.Embed(title="CFI panel opened", description=f"A CFI panel has been opened for the group `{group['gname']}`. Feel free to delete this channel.", color=bot.accent), ephemeral=True)
 
 @apptree.command(description="Shows information about Interaction roles.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def ir(interaction: discord.Interaction):
     embed = discord.Embed(title="Interaction roles", description="Interaction roles lets your user to get roles for others to see. This can be used to identify your user's preferences or be used for verifications.", color=bot.accent)
     embed.add_field(name="How to get started", value="Here's a step by step tutorial on how to use Interaction roles.\n\n1. Create a group to add and contain Interaction roles in (using /irnewgroup).\n\n2. See all your groups for later use (using /irgroups). You will see all the groups you have made with an **ID** next to it.\n\n3. Create a role for the group (using /irnew) using the Group ID of your group.\n\n4. Open a panel for your group. This panel can be used by anyone to get roles from.\n\n5. Complete!")
     await interaction.response.send_message(embed=embed)
 
 @apptree.command(description="Views all IR groups for this server.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def irgroups(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
@@ -366,7 +373,7 @@ async def irgroups(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
     
 @apptree.command(description="Creates a new IR group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(name="The name of the group.")
 async def irnewgroup(interaction: discord.Interaction, name: str):
     await interaction.response.defer()
@@ -391,7 +398,7 @@ async def irnewgroup(interaction: discord.Interaction, name: str):
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Deletes an IR group.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group.")
 async def irdelgroup(interaction: discord.Interaction, group: int):
     await interaction.response.defer()
@@ -411,7 +418,7 @@ async def irdelgroup(interaction: discord.Interaction, group: int):
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Creates a new IR (Interaction role).")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group.", role="The role to be given.")
 async def irnew(interaction: discord.Interaction, group: int, role: discord.Role):
     await interaction.response.defer()
@@ -435,7 +442,7 @@ async def irnew(interaction: discord.Interaction, group: int, role: discord.Role
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Deletes an IR.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group.", role="The role to be removed.")
 async def irdel(interaction: discord.Interaction, group: int, role: discord.Role):
     await interaction.response.defer()
@@ -459,7 +466,7 @@ async def irdel(interaction: discord.Interaction, group: int, role: discord.Role
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Lists all Interaction roles.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def irlist(interaction: discord.Interaction):
     await interaction.response.defer()
     if not interaction.user.guild_permissions.manage_guild:
@@ -479,7 +486,7 @@ async def irlist(interaction: discord.Interaction):
             embed.add_field(name=f"{role.name} - {group['gname']}", value=f"This interaction role belongs to `{group['gname']}`.", inline=False)
     
 @apptree.command(description="Opens a public IR panel.")
-@app_commands.guilds(discord.Object(id=956522017983725588))
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(group="The ID of the group to open.", description="The description of the panel.")
 async def iropen(interaction: discord.Interaction, group: int, description: str = None):
     await interaction.response.defer()
