@@ -11,7 +11,7 @@
 - [ ] **Click-for-info** (Like interaction roles but you'll get a text instead of getting a role)
     - [X] Idea
     - [X] In work
-    - [ ] Testing
+    - [X] Testing
     - [ ] Complete
 
 
