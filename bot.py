@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
+from discord.app_commands import AppCommandError, Command
 from discord import ui
 import os
 
@@ -43,7 +44,7 @@ class IRRoleButton(discord.ui.Button["InteractionRoles"]):
         # role = discord.utils.get(interaction.guild.roles, id=id)
         bot.role = role
     
-    async def callback(interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         if bot.role:
             try:
                 if not bot.role in interaction.user.roles:
@@ -143,6 +144,15 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send(f'Pong! {round(bot.latency * 1000)}ms')
 
+@apptree.error
+async def app_command_error(interaction: discord.Interaction, command: Command, error: AppCommandError):
+    if isinstance(error, commands.BotMissingPermissions):
+        embed = discord.Embed(title="Missing permissions", description="Prestigious do not have the required permissions to run this command.", color=bot.error)
+    else:
+        embed = discord.Embed(title="Something went wrong", description="Please give this error to our Support server!\n\n```{}```".format(error), color=bot.error)
+    
+    await interaction.response.send_message(embed=embed)
+
 @apptree.command(description="Shows available commands.", guild=discord.Object(id=956522017983725588))
 async def help(interaction: discord.Interaction):
     desc = "pr ping - Shows the bot's latency.\n\n"
@@ -232,9 +242,11 @@ async def cfigroups(interaction: discord.Interaction):
 # @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(name="The name of the group.")
 async def cfinewgroup(interaction: discord.Interaction, name: str):
+    await interaction.response.defer()
+
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
     
     while True:
         grid = random.randint(111111, 999999)
@@ -244,7 +256,7 @@ async def cfinewgroup(interaction: discord.Interaction, name: str):
 
     await bot.db.execute("INSERT INTO cfigroups (gname, grid, gid) VALUES ($1, $2, $3)", name, grid, interaction.guild.id)
     embed = discord.Embed(title="CFI group created", description=f"A new CFI group has been created in this server. Use /cfinew to add a button to this group.", color=bot.accent)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Adds a new CFI button to a group.")
 # @app_commands.guilds(discord.Object(id=956522017983725588))
@@ -253,12 +265,12 @@ async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick:
     await interaction.response.defer()
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
     
     lookup = await bot.db.fetchrow("SELECT * FROM cfigroups WHERE grid = $1", id)
     if not lookup:
         embed = discord.Embed(title="Invalid group", description="The group you specified does not exist.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
 
     while True:
         buttonid = random.randint(111111, 999999)
@@ -296,36 +308,38 @@ async def cfilist(interaction: discord.Interaction):
 # @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the group.")
 async def cfidelgroup(interaction: discord.Interaction, id: int):
+    await interaction.response.defer()
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
     
     lookup = await bot.db.fetchrow("SELECT * FROM cfigroups WHERE grid = $1", id)
     if not lookup:
         embed = discord.Embed(title="Invalid group", description="The group you specified does not exist.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("DELETE FROM cfigroups WHERE grid = $1", id)
     await bot.db.execute("DELETE FROM cfibuttons WHERE grid = $1", id)
     embed = discord.Embed(title="CFI group deleted", description=f"The CFI group has been deleted.", color=bot.accent)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Deletes a CFI button.")
 # @app_commands.guilds(discord.Object(id=956522017983725588))
 @app_commands.describe(id="The ID of the button.")
 async def cfidel(interaction: discord.Interaction, id: int):
+    await interaction.response.defer()
     if not interaction.user.guild_permissions.manage_guild:
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
     
     lookup = await bot.db.fetchrow("SELECT * FROM cfibuttons WHERE buttonid = $1", id)
     if not lookup:
         embed = discord.Embed(title="Invalid button", description="The button you specified does not exist.", color=bot.error)
-        return await interaction.response.send_message(embed=embed)
+        return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("DELETE FROM cfibuttons WHERE buttonid = $1", id)
     embed = discord.Embed(title="CFI button deleted", description=f"The CFI button has been deleted.", color=bot.accent)
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 @apptree.command(description="Opens a CFI panel.")
 # @app_commands.guilds(discord.Object(id=956522017983725588))
