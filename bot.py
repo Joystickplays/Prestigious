@@ -109,6 +109,7 @@ bot.accent = 0x007bff # blue
 bot.success = 0x28a745 # green
 bot.error = 0xdc3545 # red
 bot.warning = 0xffc107 # yellow
+bot.supportserver = "https://discord.gg/3At7eceN2v"
 db_credentials = {
     'user': os.environ.get('DB_USER'),
     'password': os.environ.get('DB_PASSWORD'),
@@ -150,7 +151,7 @@ async def app_command_error(interaction: discord.Interaction, command: Command, 
     if isinstance(error, commands.BotMissingPermissions):
         embed = discord.Embed(title="Missing permissions", description="Prestigious do not have the required permissions to run this command.", color=bot.error)
     else:
-        embed = discord.Embed(title="Something went wrong", description="Please give this error to our Support server!\n\n```{}```".format(error), color=bot.error)
+        embed = discord.Embed(title="Something went wrong", description=f"Please give this error to our [Support server]({bot.supportserver})!\n\n```{error}```", color=bot.error)
     
     await interaction.response.send_message(embed=embed)
 
@@ -249,9 +250,9 @@ async def cfinewgroup(interaction: discord.Interaction, name: str):
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.followup.send(embed=embed)
     
-    buttons = await bot.db.fetchrow("SELECT COUNT(*) FROM cfibuttons WHERE gid = $1", interaction.guild.id)
-    if buttons['count'] >= 10:
-        embed = discord.Embed(title="Too many buttons", description="You can only have 10 buttons per group.", color=bot.error)
+    groups = await bot.db.fetchrow("SELECT COUNT(*) FROM cfigroups WHERE gid = $1", interaction.guild.id)
+    if groups['count'] >= 5:
+        embed = discord.Embed(title="Too many groups", description="You can only have 5 groups per server.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
     while True:
@@ -278,9 +279,9 @@ async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick:
         embed = discord.Embed(title="Invalid group", description="The group you specified does not exist.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
-    groups = await bot.db.fetchrow("SELECT COUNT(*) FROM cfigroups WHERE gid = $1", interaction.guild.id)
-    if groups['count'] >= 5:
-        embed = discord.Embed(title="Too many groups", description="You can only have 5 groups per server.", color=bot.error)
+    buttons = await bot.db.fetchrow("SELECT COUNT(*) FROM cfibuttons WHERE gid = $1", interaction.guild.id)
+    if buttons['count'] >= 10:
+        embed = discord.Embed(title="Too many buttons", description="You can only have 10 buttons per group.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
 
@@ -290,7 +291,7 @@ async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick:
         if not lookup:
             break
 
-    await bot.db.execute("INSERT INTO cfibuttons (buttonid, grid, label, onclick, gid) VALUES ($1, $2, $3, $4)", buttonid, id, label, onclick, interaction.guild.id)
+    await bot.db.execute("INSERT INTO cfibuttons (buttonid, grid, label, onclick, gid) VALUES ($1, $2, $3, $4, $5)", buttonid, id, label, onclick, interaction.guild.id)
     embed = discord.Embed(title="CFI button created", description=f"A new CFI button has been created in this group. Use /cfilist to see the list of buttons.", color=bot.accent)
     await interaction.followup.send(embed=embed, ephemeral=True)
     
@@ -366,7 +367,7 @@ async def cfiopen(interaction: discord.Interaction, id: int, description: str = 
     cfibuttons = await bot.db.fetch("SELECT * FROM cfibuttons WHERE grid = $1", id)
     msg = await interaction.channel.send(embed=discord.Embed(title=group["gname"], description="Click a button to gain information regarding it." if description is None else description, color=bot.accent), view=CFIView(cfibuttons))
     await bot.db.execute("INSERT INTO cfipanels (msgid, grid, gid) VALUES ($1, $2, $3)", msg.id, group["grid"], interaction.guild.id)
-    await interaction.followup.send(embed=discord.Embed(title="CFI panel opened", description=f"A CFI panel has been opened for the group `{group['gname']}`. Feel free to delete this channel.", color=bot.accent), ephemeral=True)
+    await interaction.followup.send(embed=discord.Embed(title="CFI panel opened", description=f"A CFI panel has been opened for the group `{group['gname']}`. Feel free to delete this message.", color=bot.accent), ephemeral=True)
 
 @apptree.command(description="Shows information about Interaction roles.")
 # @app_commands.guilds(discord.Object(id=956522017983725588))
