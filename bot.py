@@ -155,10 +155,10 @@ async def app_command_error(interaction: discord.Interaction, command: Command, 
     
     await interaction.response.send_message(embed=embed)
 
-@apptree.command(description="Shows available commands.", guild=discord.Object(id=956522017983725588))
+@apptree.command(description="Shows available commands.")
 async def help(interaction: discord.Interaction):
     desc = "pr ping - Shows the bot's latency.\n\n"
-    for command in apptree.get_commands(guild=discord.Object(id=956522017983725588)):
+    for command in apptree.get_commands():
         desc += f"/{command.name} - {command.description}\n"
     embed = discord.Embed(title="Help", description=desc, color=bot.accent)
     await interaction.response.send_message(embed=embed)    
@@ -189,7 +189,7 @@ async def reload(ctx):
     except Exception as e:
         await msg.edit(content="Failed to reload! " + e, delete_after=5)
 
-@apptree.command(description="Determine a text's sentiment.", guild=discord.Object(id=956522017983725588))
+@apptree.command(description="Determine a text's sentiment.")
 @app_commands.describe(text="The text to analyze.")
 async def sentiment(interaction: discord.Interaction, text: str):
     await interaction.response.defer()
