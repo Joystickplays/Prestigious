@@ -101,7 +101,7 @@ class PrestigiousBot(commands.Bot):
     async def setup_hook(self):
         pass
 
-bot = PrestigiousBot(command_prefix=commands.when_mentioned_or("pr "), activity=activity, intents=intents)
+bot = PrestigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents)
 apptree = bot.tree
 bot.remove_command("help")
 bot.starttime = datetime.datetime.utcnow()
@@ -125,7 +125,8 @@ async def addviews():
         async with bot.db.acquire() as conn:
             rolelookup = await conn.fetch("SELECT * FROM irroles WHERE grid = $1", panel["grid"])
             guild = bot.get_guild(panel["gid"])
-            bot.add_view(InteractionRoles(guild, rolelookup), message_id=panel['msgid'])
+            if guild:
+                bot.add_view(InteractionRoles(guild, rolelookup), message_id=panel['msgid'])
 
     lookup = await bot.db.fetch("SELECT * FROM cfipanels")
 
@@ -248,6 +249,11 @@ async def cfinewgroup(interaction: discord.Interaction, name: str):
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.followup.send(embed=embed)
     
+    buttons = await bot.db.fetchrow("SELECT COUNT(*) FROM cfibuttons WHERE gid = $1", interaction.guild.id)
+    if buttons['count'] >= 10:
+        embed = discord.Embed(title="Too many buttons", description="You can only have 10 buttons per group.", color=bot.error)
+        return await interaction.followup.send(embed=embed)
+
     while True:
         grid = random.randint(111111, 999999)
         lookup = await bot.db.fetchrow("SELECT * FROM cfigroups WHERE grid = $1", grid)
@@ -272,13 +278,19 @@ async def cfinew(interaction: discord.Interaction, id: int, label: str, onclick:
         embed = discord.Embed(title="Invalid group", description="The group you specified does not exist.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
+    groups = await bot.db.fetchrow("SELECT COUNT(*) FROM cfigroups WHERE gid = $1", interaction.guild.id)
+    if groups['count'] >= 5:
+        embed = discord.Embed(title="Too many groups", description="You can only have 5 groups per server.", color=bot.error)
+        return await interaction.followup.send(embed=embed)
+
+
     while True:
         buttonid = random.randint(111111, 999999)
         lookup = await bot.db.fetchrow("SELECT * FROM cfibuttons WHERE buttonid = $1", buttonid)
         if not lookup:
             break
 
-    await bot.db.execute("INSERT INTO cfibuttons (buttonid, grid, label, onclick) VALUES ($1, $2, $3, $4)", buttonid, id, label, onclick)
+    await bot.db.execute("INSERT INTO cfibuttons (buttonid, grid, label, onclick, gid) VALUES ($1, $2, $3, $4)", buttonid, id, label, onclick, interaction.guild.id)
     embed = discord.Embed(title="CFI button created", description=f"A new CFI button has been created in this group. Use /cfilist to see the list of buttons.", color=bot.accent)
     await interaction.followup.send(embed=embed, ephemeral=True)
     
@@ -291,10 +303,10 @@ async def cfilist(interaction: discord.Interaction):
 
     groups = await bot.db.fetch("SELECT * FROM cfigroups WHERE gid = $1", interaction.guild.id)
     if not groups:
-        embed = discord.Embed(title="No CFI groups", description="There are no CFI groups in this server.", color=bot.warning)
+        embed = discord.Embed(title="No CFI buttons", description="There are no CFI buttons in this server.", color=bot.warning)
         return await interaction.response.send_message(embed=embed)
     
-    embed = discord.Embed(title="CFI groups", description="This shows the list of CFI buttons in your server. If none, create one using /cfinew", color=bot.accent)
+    embed = discord.Embed(title="CFI buttons", description="This shows the list of CFI buttons in your server. If none, create one using /cfinew", color=bot.accent)
 
     for group in groups:
         buttons = await bot.db.fetch("SELECT * FROM cfibuttons WHERE grid = $1", group["grid"])
@@ -531,8 +543,11 @@ async def main():
             if filename.endswith('.py') and not filename.startswith('views'):
                 await bot.load_extension(f'cogs.{filename[:-3]}')
 
-        bot.loop.create_task(addviews())        
-        await bot.start(os.getenv('TOKEN'))
+        bot.loop.create_task(addviews()) 
+        if os.getenv("MODE") == "p":
+            await bot.start(os.getenv('TOKEN'))
+        else:
+            await bot.start(os.getenv('BETA_TOKEN'))
         
         
         
