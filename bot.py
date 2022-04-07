@@ -17,6 +17,7 @@ import sys
 # import json
 import warnings
 import datetime
+from cogs.ticket import CreateTicketView
 
 # from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -110,6 +111,7 @@ bot.success = 0x28a745 # green
 bot.error = 0xdc3545 # red
 bot.warning = 0xffc107 # yellow
 bot.supportserver = "https://discord.gg/3At7eceN2v"
+bot.runmode = os.getenv("MODE") # p = production, b = beta
 db_credentials = {
     'user': os.environ.get('DB_USER'),
     'password': os.environ.get('DB_PASSWORD'),
@@ -120,7 +122,11 @@ bot.db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(**db_cr
 
 async def addviews():
     await bot.wait_until_ready()
+
     lookup = await bot.db.fetch("SELECT * FROM irpanels")
+    lookup2 = await bot.db.fetch("SELECT * FROM cfipanels")
+    lookup3 = await bot.db.fetch("SELECT * FROM ticketpanels")
+
 
     for panel in lookup:
         async with bot.db.acquire() as conn:
@@ -129,12 +135,15 @@ async def addviews():
             if guild:
                 bot.add_view(InteractionRoles(guild, rolelookup), message_id=panel['msgid'])
 
-    lookup = await bot.db.fetch("SELECT * FROM cfipanels")
-
-    for panel in lookup:
+    for panel in lookup2:
         async with bot.db.acquire() as conn:
             cfibuttons = await conn.fetch("SELECT * FROM cfibuttons WHERE grid = $1", panel["grid"])
             bot.add_view(CFIView(cfibuttons), message_id=panel['msgid'])
+
+    for panel in lookup3:
+        category = bot.fetch_channel(panel["cid"])
+        if category:
+            bot.add_view(CreateTicketView(category), message_id=panel['mid'])
 
 
 
@@ -142,24 +151,26 @@ async def addviews():
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send(f'Pong! {round(bot.latency * 1000)}ms')
+
+@apptree.command()
+# @app_commands.guilds(discord.Object(id=956522017983725588))
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message(f'Pong! {round(bot.latency * 1000)}ms')
 
 @apptree.error
 async def app_command_error(interaction: discord.Interaction, command: Command, error: AppCommandError):
-    if isinstance(error, commands.BotMissingPermissions):
-        embed = discord.Embed(title="Missing permissions", description="Prestigious do not have the required permissions to run this command.", color=bot.error)
+    if str(error).endswith("Missing Permissions"):
+        embed = discord.Embed(title="Missing permissions", description=f"Prestigious do not have the required permissions ({','.join(error.missing_permissions)}) to run this command.", color=bot.error)
     else:
         embed = discord.Embed(title="Something went wrong", description=f"Please give this error to our [Support server]({bot.supportserver})!\n\n```{error}```", color=bot.error)
-    
+        traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+        
     await interaction.response.send_message(embed=embed)
 
 @apptree.command(description="Shows available commands.")
+# @app_commands.guilds(discord.Object(id=956522017983725588))
 async def help(interaction: discord.Interaction):
-    desc = "pr ping - Shows the bot's latency.\n\n"
-    for command in apptree.get_commands():
-        desc += f"/{command.name} - {command.description}\n"
+    desc = "\n".join(f"`/{command.name}` - {command.description}" for command in apptree.get_commands())
     embed = discord.Embed(title="Help", description=desc, color=bot.accent)
     await interaction.response.send_message(embed=embed)    
 
@@ -408,6 +419,11 @@ async def irnewgroup(interaction: discord.Interaction, name: str):
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
+    lookup = await bot.db.fetchrow("SELECT COUNT(*) FROM irgroups WHERE gid = $1", interaction.guild.id)
+    if lookup['count'] >= 10:
+        embed = discord.Embed(title="IR group limit reached", description="You have reached the limit of IR groups you can have in this server which is 10. Delete a group!", color=bot.error)
+        return await interaction.followup.send(embed=embed)
+
     while True:
         randomid = random.randint(111111, 999999)
         lookup = await bot.db.fetchrow("SELECT * FROM irgroups WHERE grid = $1", randomid)
@@ -461,6 +477,11 @@ async def irnew(interaction: discord.Interaction, group: int, role: discord.Role
     lookup = await bot.db.fetch("SELECT * FROM irroles WHERE grid = $1 AND rid = $2", group, role.id)
     if lookup:
         embed = discord.Embed(title="IR role already exists", description=f"An IR role with the ID `{role.id}` already exists.", color=bot.error)
+        return await interaction.followup.send(embed=embed)
+
+    lookup = await bot.db.fetchrow("SELECT COUNT(*) FROM irroles WHERE grid = $1", group)
+    if lookup['count'] >= 10:
+        embed = discord.Embed(title="IR role limit reached", description="You have reached the limit of IR roles you can have in this group which is 10. Delete a role!", color=bot.error)
         return await interaction.followup.send(embed=embed)
 
     await bot.db.execute("INSERT INTO irroles (grid, rid, gid) VALUES ($1, $2, $3)", group, role.id, interaction.guild.id)
@@ -538,6 +559,7 @@ async def iropen(interaction: discord.Interaction, group: int, description: str 
         await interaction.followup.send(embed=discord.Embed(title="IR panel opened", description=f"The IR panel for {group['gname']} has been opened. Feel free to delete this message.", color=bot.success))
 
 
+
 async def main():
     async with bot:
         for filename in os.listdir('./cogs'):
@@ -545,7 +567,7 @@ async def main():
                 await bot.load_extension(f'cogs.{filename[:-3]}')
 
         bot.loop.create_task(addviews()) 
-        if os.getenv("MODE") == "p":
+        if bot.runmode == "p":
             await bot.start(os.getenv('TOKEN'))
         else:
             await bot.start(os.getenv('BETA_TOKEN'))
