@@ -18,6 +18,11 @@
     - [ ] In work
     - [ ] Testing
     - [ ] Complete
+- [X] **Tickets**
+    - [X] Idea
+    - [X] In work
+    - [X] Testing
+    - [X] Complete
 
 
 *If you have any more ideas on what to add please add it here~*
