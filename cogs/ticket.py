@@ -29,8 +29,8 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
                         await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be closed. Contact a server administrator.", ephemeral=True)
                         return
             await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket())
-        except:
-            await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
         
 class CreateTicketView(discord.ui.View):
     def __init__(self, category):
