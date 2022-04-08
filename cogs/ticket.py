@@ -16,7 +16,8 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
+            ch = ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
+            await ch.set_permissions(interaction.user, read_messages=True)
             await interaction.response.send_message(f"{interaction.user.mention}, Ticket has been created. Please visit {ticketchannel.mention}", ephemeral=True)
             class CloseTicket(discord.ui.View):
                 def __init__(self):
