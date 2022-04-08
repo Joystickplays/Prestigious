@@ -33,7 +33,6 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
             await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket())
         except Exception as e:
             await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
-            print(self.category)
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             
 
