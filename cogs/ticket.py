@@ -16,8 +16,8 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            ch = ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
-            await ch.set_permissions(interaction.user, read_messages=True)
+            ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
+            await ticketchannel.set_permissions(interaction.user, read_messages=True)
             await interaction.response.send_message(f"{interaction.user.mention}, Ticket has been created. Please visit {ticketchannel.mention}", ephemeral=True)
             class CloseTicket(discord.ui.View):
                 def __init__(self):
@@ -33,6 +33,7 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
             await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket())
         except Exception as e:
             await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
+            print(self.category)
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             
 
@@ -71,8 +72,8 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
             return
         
         embed = discord.Embed(title="Ticketing Settings", color=self.bot.accent)
-        category = interaction.guild.get_channel(lookup["caid"])
-        channel = interaction.guild.get_channel(lookup["cid"])
+        category = await interaction.guild.fetch_channel(lookup['caid'])
+        channel = await interaction.guild.fetch_channel(lookup['cid'])
         embed.add_field(name="Channel", value=f"<#{lookup['cid']}>" if channel else "Not set.", inline=False)
         embed.add_field(name="Category", value=f"{category.name}" if category else "Not set.", inline=False)
         class SettingsModal(ui.Modal, title='Settings'):
@@ -119,8 +120,8 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
             return
         
         embed = discord.Embed(title="Get a ticket", description="Click on the button below to create a ticket.", color=self.bot.accent)
-        category = interaction.guild.get_channel(lookup["caid"])
-        channel = interaction.guild.get_channel(lookup["cid"])
+        category = await interaction.guild.fetch_channel(lookup["caid"])
+        channel = await interaction.guild.fetch_channel(lookup["cid"])
         if category is None or channel is None:
             await interaction.followup.send(f"{interaction.user.mention}, One or more of the (category) channels unexpectedly is inaccessible.", ephemeral=True)
             return

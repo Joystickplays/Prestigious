@@ -141,7 +141,7 @@ async def addviews():
             bot.add_view(CFIView(cfibuttons), message_id=panel['msgid'])
 
     for panel in lookup3:
-        category = bot.fetch_channel(panel["cid"])
+        category = await bot.fetch_channel(panel["cid"])
         if category:
             bot.add_view(CreateTicketView(category), message_id=panel['mid'])
 
