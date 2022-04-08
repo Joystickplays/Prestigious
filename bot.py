@@ -151,6 +151,9 @@ async def addviews():
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
+@bot.event
+async def on_guild_join(guild):
+    print(f'{bot.user.name} has joined {guild.name}') # why not
 
 @apptree.command()
 # @app_commands.guilds(discord.Object(id=956522017983725588))

@@ -18,7 +18,7 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
         try:
             ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
             await ticketchannel.set_permissions(interaction.user, read_messages=True)
-            await interaction.response.send_message(f"{interaction.user.mention}, Ticket has been created. Please visit {ticketchannel.mention}", ephemeral=True)
+            await interaction.response.send_message(f"Ticket has been created. Please visit {ticketchannel.mention}", ephemeral=True)
             class CloseTicket(discord.ui.View):
                 def __init__(self):
                     super().__init__()
@@ -28,11 +28,11 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
                     try:
                         await ticketchannel.delete(reason="Ticket closed.")
                     except:
-                        await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be closed. Contact a server administrator.", ephemeral=True)
+                        await interaction.response.send_message(f"Ticket could not be closed. Contact a server administrator.", ephemeral=True)
                         return
             await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket())
         except Exception as e:
-            await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
+            await interaction.response.send_message(f"Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             
 
@@ -67,7 +67,7 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
         await interaction.response.defer()
         lookup = await self.bot.db.fetchrow("SELECT * FROM ticketsettings WHERE gid = $1", interaction.guild.id)
         if lookup is None:
-            await interaction.followup.send(f"{interaction.user.mention}, You have not set up ticketing settings yet. Please use `/ticket set` to set them up.", ephemeral=True)
+            await interaction.followup.send(f"You have not set up ticketing settings yet. Please use `/ticket set` to set them up.", ephemeral=True)
             return
         
         embed = discord.Embed(title="Ticketing Settings", color=self.bot.accent)
@@ -83,10 +83,10 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
                 getchannel = discord.utils.get(interaction.guild.channels, name=self.channel.value)
                 getcategory = discord.utils.get(interaction.guild.categories, name=self.category.value)
                 if getchannel is None or getcategory is None:
-                    await interaction.response.send_message(f"{interaction.user.mention}, One or more of the (category) channels you provided does not exist.", ephemeral=True)
+                    await interaction.response.send_message(f"One or more of the (category) channels you provided does not exist.", ephemeral=True)
                     return
                 await interaction.client.db.execute("UPDATE ticketsettings SET cid = $1, caid = $2 WHERE gid = $3", getchannel.id, getcategory.id, interaction.guild.id)
-                await interaction.response.send_message(f"{interaction.user.mention}, Ticketing settings have been updated.", ephemeral=True)
+                await interaction.response.send_message(f"Ticketing settings have been updated.", ephemeral=True)
                 
         class ModSettings(discord.ui.View):
             def __init__(self, author: discord.Member):
@@ -96,7 +96,7 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
             @discord.ui.button(label='Modify settings', style=discord.ButtonStyle.green)
             async def modify(self, interaction: discord.Interaction, button: discord.ui.Button):
                 if interaction.user.id != self.author.id:
-                    await interaction.response.send_message(f"{interaction.user.mention}, You cannot interact with this button.", ephemeral=True)
+                    await interaction.response.send_message(f"You cannot interact with this button.", ephemeral=True)
                     return
                 await interaction.response.send_modal(SettingsModal())
 
@@ -107,7 +107,7 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
     @app_commands.describe(channel="The channel to use for ticketing.", category="The category to use for ticketing.")
     async def set(self, interaction: discord.Interaction, channel: discord.TextChannel, category: discord.CategoryChannel):
         await self.bot.db.execute("INSERT INTO ticketsettings (gid, cid, caid) VALUES ($1, $2, $3)", interaction.guild.id, channel.id, category.id)
-        await interaction.response.send_message(f"{interaction.user.mention}, Ticketing settings have been set.", ephemeral=True)
+        await interaction.response.send_message(f"Ticketing settings have been set.", ephemeral=True)
 
     @app_commands.command(description="Open a ticket panel.")
     @app_commands.checks.has_permissions(manage_guild=True)
@@ -115,19 +115,19 @@ class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
         await interaction.response.defer()
         lookup = await self.bot.db.fetchrow("SELECT * FROM ticketsettings WHERE gid = $1", interaction.guild.id)
         if lookup is None:
-            await interaction.followup.send(f"{interaction.user.mention}, You have not set up ticketing settings yet. Please use `/ticket set` to set them up.", ephemeral=True)
+            await interaction.followup.send(f"You have not set up ticketing settings yet. Please use `/ticket set` to set them up.", ephemeral=True)
             return
         
         embed = discord.Embed(title="Get a ticket", description="Click on the button below to create a ticket.", color=self.bot.accent)
         category = await interaction.guild.fetch_channel(lookup["caid"])
         channel = await interaction.guild.fetch_channel(lookup["cid"])
         if category is None or channel is None:
-            await interaction.followup.send(f"{interaction.user.mention}, One or more of the (category) channels unexpectedly is inaccessible.", ephemeral=True)
+            await interaction.followup.send(f"One or more of the (category) channels unexpectedly is inaccessible.", ephemeral=True)
             return
             
         msg = await channel.send(embed=embed, view=CreateTicketView(category))
         await self.bot.db.execute("INSERT INTO ticketpanels (gid, mid, cid) VALUES ($1, $2, $3)", interaction.guild.id, msg.id, category.id)
-        await interaction.followup.send(f"{interaction.user.mention}, Ticket panel has been created.")
+        await interaction.followup.send(f"Ticket panel has been created.")
 
 
 async def setup(bot: commands.Bot):
