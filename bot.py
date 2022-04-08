@@ -31,10 +31,10 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 def errortofriendly(error):
     error = str(error)
     if error.startswith("403"):
-        return "Prestigious doesn't have the permissions to do the following actions. Please contact a moderator."
+        return "Topstigious doesn't have the permissions to do the following actions. Please contact a moderator."
     elif error.startswith("404"):
         return "The requested resource was not found. Please contact a moderator."
-    return f"An unexpected error has occured. Join Prestigious' support server for more information.\n\n{error}"
+    return f"An unexpected error has occured. Join Topstigious' support server for more information.\n\n{error}"
 
 class IRRoleButton(discord.ui.Button["InteractionRoles"]):
     def __init__(self, role: discord.Role):
@@ -95,14 +95,14 @@ class CFIView(discord.ui.View):
 
 activity = discord.Activity(name='the world burn :)', type=discord.ActivityType.watching)
 intents = discord.Intents.all()
-class PrestigiousBot(commands.Bot):
+class TopstigiousBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     async def setup_hook(self):
         pass
 
-bot = PrestigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents)
+bot = TopstigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents)
 apptree = bot.tree
 bot.remove_command("help")
 bot.starttime = datetime.datetime.utcnow()
@@ -163,7 +163,7 @@ async def ping(interaction: discord.Interaction):
 @apptree.error
 async def app_command_error(interaction: discord.Interaction, command: Command, error: AppCommandError):
     if str(error).endswith("Missing Permissions"):
-        embed = discord.Embed(title="Missing permissions", description=f"Prestigious do not have the required permissions ({','.join(error.missing_permissions)}) to run this command.", color=bot.error)
+        embed = discord.Embed(title="Missing permissions", description=f"Topstigious do not have the required permissions ({','.join(error.missing_permissions)}) to run this command.", color=bot.error)
     else:
         embed = discord.Embed(title="Something went wrong", description=f"Please give this error to our [Support server]({bot.supportserver})!\n\n```{error}```", color=bot.error)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
