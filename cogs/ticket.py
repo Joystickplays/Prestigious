@@ -1,10 +1,11 @@
-
+import traceback
 import discord
 from discord import app_commands, ui
 from discord.ext import commands
 import os
 import random
 import uuid
+import sys
 
 class CreateTicketModal(ui.Modal, title='Create ticket'):
     def __init__(self, category):
@@ -31,7 +32,9 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
             await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket())
         except Exception as e:
             await interaction.response.send_message(f"{interaction.user.mention}, Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
-        
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            
+
 class CreateTicketView(discord.ui.View):
     def __init__(self, category):
         super().__init__(timeout=None)
