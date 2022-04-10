@@ -23,6 +23,12 @@
     - [X] In work
     - [X] Testing
     - [X] Complete
+- [ ] **Password-protected channel/categories**
+    - [X] Idea
+    - [ ] In work
+    - [ ] Testing
+    - [ ] Complete
 
 
 *If you have any more ideas on what to add please add it here~*
+*did you guys know this has a pattern of being done, not done, done, and so one?*
