@@ -102,7 +102,7 @@ class TopstigiousBot(commands.Bot):
     async def setup_hook(self):
         pass
 
-bot = TopstigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents)
+bot = TopstigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents, owner_id=534596269574979595) # dont forget to change id to you if youre stealing my work
 apptree = bot.tree
 bot.remove_command("help")
 bot.starttime = datetime.datetime.utcnow()
@@ -190,6 +190,13 @@ async def globalsync(ctx):
     msg = await ctx.send("Syncing...")
     await apptree.sync()
     await msg.edit(content="Synced! Should be up in an hour or two.", delete_after=5)
+
+@bot.command()
+@commands.is_owner()
+async def ex(ctx, *, query):
+    msg = await ctx.send("Executing...")
+    await bot.db.execute(query)
+    await msg.edit(content="Executed!", delete_after=5)
 
 @bot.command()
 @commands.is_owner()
