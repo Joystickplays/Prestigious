@@ -42,7 +42,7 @@ class Moderation(commands.Cog):
         await interaction.response.send_message(f"You have kicked {member.mention}.", ephemeral=True)
 
     @app_commands.command(description="Lists all warns (of a member, if specificed.).")
-    @app_commands.guilds(discord.Object(id=956522017983725588))
+    # @app_commands.guilds(discord.Object(id=956522017983725588))
     @app_commands.describe(member="The member to list warns for.")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None):
@@ -71,7 +71,7 @@ class Moderation(commands.Cog):
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(description="Warn a member.")
-    @app_commands.guilds(discord.Object(id=956522017983725588))
+    # @app_commands.guilds(discord.Object(id=956522017983725588))
     @app_commands.describe(member="The member to warn.", reason="The reason for the warn.", notifymember="Whether or not to notify the member.")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str = "Not specificed", notifymember: bool = True):
@@ -96,7 +96,7 @@ class Moderation(commands.Cog):
         await interaction.followup.send(embed=embed)
 
     @app_commands.command(description="Inspect a warn entry.")
-    @app_commands.guilds(discord.Object(id=956522017983725588))
+    # @app_commands.guilds(discord.Object(id=956522017983725588))
     @app_commands.describe(wid="The warn entry to inspect.")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def warninspect(self, interaction: discord.Interaction, wid: int):
