@@ -162,11 +162,12 @@ async def ping(interaction: discord.Interaction):
 
 @apptree.error
 async def app_command_error(interaction: discord.Interaction, command: Command, error: AppCommandError):
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
     if str(error).endswith("Missing Permissions"):
-        embed = discord.Embed(title="Missing permissions", description=f"Topstigious do not have the required permissions ({','.join(error.missing_permissions)}) to run this command.", color=bot.error)
+        embed = discord.Embed(title="Missing permissions", description=f"You/Topstigious do not have the required permissions ({','.join(error.missing_permissions)}) to run this command.", color=bot.error)
     else:
         embed = discord.Embed(title="Something went wrong", description=f"Please give this error to our [Support server]({bot.supportserver})!\n\n```{error}```", color=bot.error)
-        traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
         
     await interaction.response.send_message(embed=embed)
 

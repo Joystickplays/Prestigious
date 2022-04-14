@@ -40,11 +40,12 @@ class ClosedTicketPanel(discord.ui.View):
 
     @discord.ui.button(label="Delete ticket", style=discord.ButtonStyle.grey)
     async def create_text_dump(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.client.db.execute("DELETE FROM tickets WHERE cid = $1", self.channel.id)
         await self.channel.delete(reason="Ticket deleted.")
 
 class CloseTicket(discord.ui.View):
     def __init__(self, channel: discord.TextChannel):
-        super().__init__()
+        super().__init__(timeout=None)
         self.channel = channel
 
         
@@ -75,11 +76,17 @@ class CreateTicketModal(ui.Modal, title='Create ticket'):
         try:
             ticketchannel = await interaction.guild.create_text_channel(f"ticket-{random.randint(1, 100000)}", category=self.category, reason=self.ticket.value)
             await ticketchannel.set_permissions(interaction.user, read_messages=True)
+            await interaction.client.db.execute("INSERT INTO tickets (gid, uid, cid) VALUES ($1, $2, $3)", interaction.guild.id, interaction.user.id, ticketchannel.id)
             await interaction.response.send_message(f"Ticket has been created. Please visit {ticketchannel.mention}", ephemeral=True)
             
-            await ticketchannel.send(embed=discord.Embed(title="Ticket", description=self.ticket.value, color=interaction.client.accent), view=CloseTicket(ticketchannel))
+            await ticketchannel.send(embed=discord.Embed(title="Welcome to your ticket.", description=f"Welcome to your ticket, {interaction.user.mention}, support will be with you soon.\nTo close the ticket, click the button below.\n\n{self.ticket.value}", color=interaction.client.accent), view=CloseTicket(ticketchannel))
         except Exception as e:
-            await interaction.response.send_message(f"Ticket could not be created. Contact a server administrator.\n\n```{e}```", ephemeral=True)
+            filler = None
+            if e.endswith("Missing Permissions"):
+                filler = "This may be caused by the bot not having the correct permissions to create a channel. It will need Manage Channels."
+            elif e.endswith("Missing Access"):
+                filler = "This may be caused by the bot not being able to access the category where the tickets is supposed to be. Overwrite permissions for the bot."
+            await interaction.response.send_message(f"Ticket could not be created. Contact a server administrator.\n\n```{e}```\n{filler}", ephemeral=True)
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             
 
@@ -90,6 +97,11 @@ class CreateTicketView(discord.ui.View):
 
     @discord.ui.button(label='Create ticket', style=discord.ButtonStyle.green, custom_id="createticket")
     async def create(self, interaction: discord.Interaction, button: discord.ui.Button):
+        lookup = await interaction.client.db.fetchrow("SELECT * FROM tickets WHERE uid = $1", interaction.user.id)
+        if lookup:
+            embed = discord.Embed(title="A ticket open", description=f"You already have a ticket open. Close the previous one first.", colour=interaction.client.error)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         await interaction.response.send_modal(CreateTicketModal(self.category))
 
 class Ticketing(commands.Cog, app_commands.Group, name="ticket"):
