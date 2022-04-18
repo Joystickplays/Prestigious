@@ -109,19 +109,19 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
         banned = await interaction.client.db.fetchrow("SELECT uid FROM bannedformers WHERE uid = $1", interaction.user.id)
         if banned:
             embed = discord.Embed(title="You are banned from taking forms.", description=f"You're banned from taking forms by a Topstigious staff member.\nReason: `{banned['reason']}`\nAppeal the ban if this is a false ban.", colour=interaction.client.error)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             return
 
         form = await interaction.client.db.fetchrow("SELECT * FROM forms WHERE refid = $1", refid)
         if not form:
             embed = discord.Embed(title="Form not found.", description=f"Form with referral ID of ({refid}) was not found.", colour=interaction.client.error)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             return
         
         inputs = await interaction.client.db.fetch("SELECT * FROM forminputs WHERE refid = $1", refid)
         if not inputs:
             embed = discord.Embed(title="No inputs.", description=f"Form with referral ID of ({refid}) has no inputs.", colour=interaction.client.error)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
 
         class TakeForm(ui.Modal, title=f"{form['fname']}"):
             def __init__(self, inputs: list, form):
@@ -176,7 +176,7 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
         owneruser = await interaction.client.fetch_user(form["ownid"])
         if not owneruser:
             embed = discord.Embed(title="Owner not found.", description=f"The owner of form ({form['fname']}) could not be found.", colour=interaction.client.error)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             return
         msg = await interaction.followup.send(embed=discord.Embed(title=f"You are about to take the {form['fname']} form.", description=f"You're about to take a user-made form. This form is **made by {owneruser.name}#{owneruser.discriminator}** for others to take. Do not insert sensitive credentials to this form!\n\n**YOU HAVE BEEN WARNED.**\n**THIS FORM IS NOT AFFILIATED WITH DISCORD OR TOPSTIGIOUS.**", colour=interaction.client.accent), view=disabledview)
         await asyncio.sleep(3)
