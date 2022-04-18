@@ -38,7 +38,7 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
     
     @app_commands.command(description="Create a new form.")
     async def new(self, interaction: discord.Interaction):
-        banned = await interaction.client.db.fetchrow("SELECT uid FROM bannedformers WHERE uid = $1", interaction.user.id)
+        banned = await interaction.client.db.fetchrow("SELECT * FROM bannedformers WHERE uid = $1", interaction.user.id)
         if banned:
             embed = discord.Embed(title="You are banned from making forms.", description=f"You're banned from creating or using forms by a Topstigious staff member.\nReason: `{banned['reason']}`\nAppeal the ban if this is a false ban.", colour=interaction.client.error)
             await interaction.response.send_message(embed=embed)
@@ -85,6 +85,10 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
         inputs = await interaction.client.db.fetch("SELECT * FROM forminputs WHERE refid = $1", refid)
         if len(inputs) >= 5:
             embed = discord.Embed(title="Too many inputs.", description=f"Form with referral ID of ({refid}) already has 5 inputs.", colour=interaction.client.error)
+            await interaction.followup.send(embed=embed)
+            return
+        if len(label) >= 45 or len(placeholder) >= 45 or len(default) >= 45:
+            embed = discord.Embed(title="Too long.", description=f"Label, placeholder, or default must be less than 45 characters.", colour=interaction.client.error)
             await interaction.followup.send(embed=embed)
             return
 
@@ -174,7 +178,7 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
             embed = discord.Embed(title="Owner not found.", description=f"The owner of form ({form['fname']}) could not be found.", colour=interaction.client.error)
             await interaction.response.send_message(embed=embed)
             return
-        msg = await interaction.followup.send(embed=discord.Embed(title=f"You are about to take the {form['fname']} form.", description=f"You're about to take a **NON-OFFICIAL FORM REGARDING DISCORD OR TOPSTIGIOUS**. This form was **USER-MADE** and **made by {owneruser.name}#{owneruser.discriminator}** for others to take. Do **NOT**, insert sensitive credentials to this form.\n\n**YOU HAVE BEEN WARNED.**", colour=interaction.client.accent), view=disabledview)
+        msg = await interaction.followup.send(embed=discord.Embed(title=f"You are about to take the {form['fname']} form.", description=f"You're about to take a user-made form. This form is **made by {owneruser.name}#{owneruser.discriminator}** for others to take. Do not insert sensitive credentials to this form!\n\n**YOU HAVE BEEN WARNED.**\n**THIS FORM IS NOT AFFILIATED WITH DISCORD OR TOPSTIGIOUS.**", colour=interaction.client.accent), view=disabledview)
         await asyncio.sleep(3)
         await msg.edit(view=TakeFormView(form, interaction.user))
         

@@ -226,6 +226,25 @@ async def reload(ctx):
     except Exception as e:
         await msg.edit(content="Failed to reload! " + e, delete_after=5)
 
+ # table bannedformers
+    # column - uid BIGINT
+    # column - reason VARCHAR(1000)
+    # CREATE TABLE bannedformers (uid BIGINT, reason VARCHAR(1000));
+
+@bot.command()
+@commands.is_owner()
+async def banform(ctx, uid, reason):
+    await bot.db.execute("INSERT INTO bannedformers VALUES ($1, $2)", int(uid), reason)
+    await ctx.send("Banned!", delete_after=5)
+
+@bot.command()
+@commands.is_owner()
+async def unbanform(ctx, uid):
+    await bot.db.execute("DELETE FROM bannedformers WHERE uid = $1", int(uid))
+    await ctx.send("Unbanned!", delete_after=5)
+
+
+
 @apptree.command(description="Determine a text's sentiment.")
 @app_commands.describe(text="The text to analyze.")
 async def sentiment(interaction: discord.Interaction, text: str):
