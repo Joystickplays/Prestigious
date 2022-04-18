@@ -1,3 +1,7 @@
+import logging
+logging.basicConfig(filename='./logs.log', filemode='w', format='(%(levelname)s) %(message)s - happened at %(asctime)s', datefmt='%d-%b-%y %H:%M:%S')
+logger = logging.getLogger(__name__)
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -105,6 +109,7 @@ class TopstigiousBot(commands.Bot):
 bot = TopstigiousBot(command_prefix=commands.when_mentioned_or("pr " if os.getenv("MODE") == "p" else "prb "), activity=activity, intents=intents, owner_id=534596269574979595) # dont forget to change id to you if youre stealing my work
 apptree = bot.tree
 bot.remove_command("help")
+
 bot.starttime = datetime.datetime.utcnow()
 bot.accent = 0x007bff # blue
 bot.success = 0x28a745 # green
@@ -151,11 +156,18 @@ async def addviews():
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
+    logger.info("Bot is ready!")
+    print("Bot is ready.")
 
 @bot.event
 async def on_guild_join(guild):
-    print(f'{bot.user.name} has joined {guild.name}') # why not
+    logger.info(f"Joined guild {guild.name}")
+    print(f"Joined guild {guild.name}")
+
+@bot.event
+async def on_interaction(interaction):
+    if interaction.type == discord.InteractionType.application_command:
+        logger.info(f"{interaction.user.name} used {interaction.command.name}")
 
 @apptree.command()
 # @app_commands.guilds(discord.Object(id=956522017983725588))
@@ -164,6 +176,7 @@ async def ping(interaction: discord.Interaction):
 
 @apptree.error
 async def app_command_error(interaction: discord.Interaction, command: Command, error: AppCommandError):
+    logger.error(str(error))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     if str(error).endswith("Missing Permissions"):
