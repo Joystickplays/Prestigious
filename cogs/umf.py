@@ -13,6 +13,7 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
   
     # table forms
     # column - name VARCHAR(100)
+    # column - gid BIGINT
     # column - refid INT
     # column - ownid BIGINT
     # CREATE TABLE forms (fname VARCHAR(100), refid INT, ownid BIGINT);
@@ -31,6 +32,13 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
     # column - reason VARCHAR(1000)
     # CREATE TABLE bannedformers (uid BIGINT, reason VARCHAR(1000));
 
+    # table umfsettings
+    # column - gid BIGINT
+    # column - allowcreations BOOL
+    # column - restrictguildonly BOOL
+    # column - takingforms BOOL
+    # CREATE TABLE umfsettings (gid BIGINT, allowcreations BOOL, restrictguildonly BOOL, takingforms BOOL);
+
     @app_commands.command(description="About UMF (or User-made forms).")
     async def about(self, interaction: discord.Interaction):
         embed = discord.Embed(title="User-made forms", description="User-made forms are forms that you can make yourself.\nThe forms are like Google forms. Anyone can take it if they have the referral and the results will get sent to you. Get started with /umf new", colour=interaction.client.accent)
@@ -43,6 +51,12 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
             embed = discord.Embed(title="You are banned from making forms.", description=f"You're banned from creating or using forms by a Topstigious staff member.\nReason: `{banned['reason']}`\nAppeal the ban if this is a false ban.", colour=interaction.client.error)
             await interaction.response.send_message(embed=embed)
             return
+        settings = await interaction.client.db.fetchrow("SELECT * FROM umfsettings WHERE gid = $1", interaction.guild.id)
+        if settings:
+            if not settings['allowcreations'] and not interaction.user.guild_permissions.manage_guild:
+                embed = discord.Embed(title="Creations of forms is disabled", description="This server has disabled creation of new forms. You are still able to take existing forms if this server allows you to.", colour=interaction.client.error)
+                await interaction.response.send_message(embed=embed)
+                return
 
         class NewForm(ui.Modal, title="Name of the form"):
             formtitle = ui.TextInput(label="Name of the form", placeholder="Enter the name of the form", max_length=100)
@@ -57,7 +71,7 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
                         break
                 
                 await interaction.client.db.execute("INSERT INTO forms (fname, refid, ownid) VALUES ($1, $2, $3)", formtitle, refid, interaction.user.id)
-                await interaction.response.send_message(embed=discord.Embed(title="Form created", description=f"Form ({formtitle}) has been created with Referral ID of ({refid}).\nUse /umf newinput to add inputs to the form.", colour=interaction.client.accent), ephemeral=True)
+                await interaction.response.send_message(embed=discord.Embed(title="Form created", description=f"Form ({formtitle}) has been created with Referral ID of ({refid}).\nUse /umf newinput to add inputs to the form.", colour=interaction.client.accent))
 
         await interaction.response.send_modal(NewForm())
 
@@ -106,11 +120,23 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
     )
     async def take(self, interaction: discord.Interaction, refid: int):
         await interaction.response.defer()
+        form = await interaction.client.db.fetchrow("SELECT * FROM forms WHERE refid = $1", refid)
+
         banned = await interaction.client.db.fetchrow("SELECT uid FROM bannedformers WHERE uid = $1", interaction.user.id)
         if banned:
             embed = discord.Embed(title="You are banned from taking forms.", description=f"You're banned from taking forms by a Topstigious staff member.\nReason: `{banned['reason']}`\nAppeal the ban if this is a false ban.", colour=interaction.client.error)
             await interaction.followup.send(embed=embed)
             return
+        settings = await interaction.client.db.fetchrow("SELECT * FROM umfsettings WHERE gid = $1", interaction.guild.id)
+        if settings:
+            if not settings['takingforms'] and not interaction.user.guild_permissions.manage_guild:
+                embed = discord.Embed(title="Takings of forms is disabled", description="This server has disabled taking of forms. Contact a server moderator to enable it back.", colour=interaction.client.error)
+                await interaction.followup.send(embed=embed)
+                return
+            elif form["gid"] != interaction.guild.id and settings["restrictguildonly"] and not interaction.user.guild_permissions.manage_guild:
+                embed = discord.Embed(title="Out of server.", description="This server has restricted taking of forms to forms from this server only.", colour=interaction.client.error)
+                await interaction.followup.send(embed=embed)
+                return
 
         form = await interaction.client.db.fetchrow("SELECT * FROM forms WHERE refid = $1", refid)
         if not form:
@@ -144,12 +170,12 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
                     embed = discord.Embed(title="Owner not found.", description=f"The owner of form ({form['fname']}) could not be found.", colour=interaction.client.error)
                     await interaction.response.send_message(embed=embed)
                     return
-                strbuild = ""
+                embed = discord.Embed(title=f"{interaction.user.name} taken your form {form['fname']}", description=f"{interaction.user.name}#{interaction.user.discriminator} has taken your form {form['fname']}.", colour=interaction.client.accent)
                 i = 0
                 for value in values:
-                    strbuild += f"{inputs[i]['ilabel']}: {value}\n"
+                    embed.add_field(name=inputs[i]['ilabel'], value=value)
                     i += 1
-                await owneruser.send(embed=discord.Embed(title=f"{interaction.user.name} taken your form {form['fname']}", description=f"{interaction.user.mention} has taken your form {form['fname']}.\n\n{strbuild}", colour=interaction.client.accent))
+                await owneruser.send(embed=embed)
                 await interaction.response.send_message(embed=discord.Embed(title="Form taken", description=f"Form ({form['fname']}) has been taken and submitted. Thank you for filling the form!", colour=interaction.client.accent), ephemeral=True)
 
             async def on_error(self, interaction: discord.Interaction):
@@ -181,6 +207,84 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
         msg = await interaction.followup.send(embed=discord.Embed(title=f"You are about to take the {form['fname']} form.", description=f"You're about to take a user-made form. This form is **made by {owneruser.name}#{owneruser.discriminator}** for others to take. Do not insert sensitive credentials to this form!\n\n**YOU HAVE BEEN WARNED.**\n**THIS FORM IS NOT AFFILIATED WITH DISCORD OR TOPSTIGIOUS.**", colour=interaction.client.accent), view=disabledview)
         await asyncio.sleep(3)
         await msg.edit(view=TakeFormView(form, interaction.user))
+
+    @app_commands.command(description="Adjust UMF settings for your server.")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def settings(self, interaction: discord.Interaction):
+        rawsettings = await interaction.client.db.fetchrow("SELECT * FROM umfsettings WHERE gid = $1", interaction.guild.id)
+        if not rawsettings:
+            settings = {
+                "gid": interaction.guild.id,
+                "allowcreations": True,
+                "restrictguildonly": False,
+                "takingforms": True
+            }
+            await interaction.client.db.execute("INSERT INTO umfsettings VALUES ($1, $2, $3, $4)", *settings.values())
+        else:
+            settings = {
+                "gid": rawsettings["gid"],
+                "allowcreations": rawsettings["allowcreations"],
+                "restrictguildonly": rawsettings["restrictguildonly"],
+                "takingforms": rawsettings["takingforms"]
+            }
+
+        class Settings(ui.View):
+            def __init__(self, options):
+                super().__init__()
+                self.options = options
+                self.allowcreations.style = discord.ButtonStyle.green if self.options["allowcreations"] else discord.ButtonStyle.secondary
+                self.restrictguildonly.style = discord.ButtonStyle.green if self.options["restrictguildonly"] else discord.ButtonStyle.secondary
+                self.takingforms.style = discord.ButtonStyle.green if self.options["takingforms"] else discord.ButtonStyle.secondary
+
+            @discord.ui.button(label="Allow creations")
+            async def allowcreations(self, interaction: discord.Interaction, button: discord.Button):
+                self.options["allowcreations"] = not self.options["allowcreations"]
+                button.style = discord.ButtonStyle.green if self.options["allowcreations"] else discord.ButtonStyle.gray
+                await interaction.response.edit_message(view=self)
+
+            @discord.ui.button(label="Restrict forms from guild only")
+            async def restrictguildonly(self, interaction: discord.Interaction, button: discord.Button):
+                self.options["restrictguildonly"] = not self.options["restrictguildonly"]
+                button.style = discord.ButtonStyle.green if self.options["restrictguildonly"] else discord.ButtonStyle.gray
+                await interaction.response.edit_message(view=self)
+
+            @discord.ui.button(label="Allow taking forms")
+            async def takingforms(self, interaction: discord.Interaction, button: discord.Button):
+                self.options["takingforms"] = not self.options["takingforms"]
+                button.style = discord.ButtonStyle.green if self.options["takingforms"] else discord.ButtonStyle.gray
+                await interaction.response.edit_message(view=self)
+
+            @discord.ui.button(label="Apply", style=discord.ButtonStyle.primary)
+            async def apply(self, interaction: discord.Interaction, button: discord.Button):
+                del self.options["gid"]
+                await interaction.client.db.execute("UPDATE umfsettings SET allowcreations = $1, restrictguildonly = $2, takingforms = $3 WHERE gid = $4", *self.options.values(), interaction.guild.id)
+                for button in self.children:
+                    button.disabled = True
+                await interaction.response.edit_message(embed=discord.Embed(title="Settings applied", description="Settings applied successfully.", colour=interaction.client.accent), view=self)
+
+        await interaction.response.send_message(embed=discord.Embed(title="UMF Settings", description="These settings are only limited to your servers.\nTo enable/disable an option, click on their button.", colour=self.bot.accent), view=Settings(settings), ephemeral=True)
+
+    @app_commands.command(description="Delete a form.")
+    @app_commands.describe(refid="The referral ID of the form to delete.")
+    async def delete(self, interaction: discord.Interaction, refid: int):
+        form = await interaction.client.db.fetchrow("SELECT * FROM umf WHERE refid = $1", refid)
+        if not form:
+            embed = discord.Embed(title="Form not found.", description=f"Form with referral ID {refid} could not be found.", colour=interaction.client.error)
+            await interaction.followup.send(embed=embed)
+        
+        if form["gid"] == interaction.guild.id and interaction.user.guild_permissions.manage_guild:
+            await interaction.client.db.execute("DELETE FROM umf WHERE refid = $1", refid)
+            embed = discord.Embed(title="Form deleted.", description=f"Form with referral ID {refid} has been deleted.", colour=interaction.client.accent)
+            await interaction.response.send_message(embed=embed)
+            return
+        elif form["ownid"] == interaction.user.id:
+            await interaction.client.db.execute("DELETE FROM umf WHERE refid = $1", refid)
+            embed = discord.Embed(title="Form deleted.", description=f"Form with referral ID {refid} has been deleted.", colour=interaction.client.accent)
+            await interaction.response.send_message(embed=embed)
+            return
+
+        embed = discord.Embed(title="Permission denied.", description=f"You do not have permission to delete this form.", colour=interaction.client.error)
+        await interaction.response.send_message(embed=embed)
         
 
 async def setup(bot: commands.Bot):
