@@ -1,4 +1,4 @@
-# Prestigious
+# Topstigious (formerly Prestigious)
 A basic multi-purpose Discord bot.
 
 ### Can I run it myself?
