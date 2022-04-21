@@ -12,20 +12,20 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
         super().__init__()
   
     # table forms
-    # column - name VARCHAR(100)
+    # column - fname VARCHAR(100)
     # column - gid BIGINT
     # column - refid INT
     # column - ownid BIGINT
-    # CREATE TABLE forms (fname VARCHAR(100), refid INT, ownid BIGINT);
+    # CREATE TABLE forms (fname VARCHAR(100), gid BIGINT, refid INT, ownid BIGINT);
 
     # table forminputs
     # column - refid INT
-    # column - label VARCHAR(128)
-    # column - type SMALLINT
+    # column - tlabel VARCHAR(128)
+    # column - ttype SMALLINT
     # column - required BOOL
     # column - placeholder VARCHAR(128)
-    # column - default VARCHAR(128)
-    # CREATE TABLE forminputs (refid INT, label VARCHAR(128), type SMALLINT, required BOOL, placeholder VARCHAR(128), default VARCHAR(128));
+    # column - tdefault VARCHAR(128)
+    # CREATE TABLE forminputs (refid INT, tlabel VARCHAR(128), ttype SMALLINT, required BOOL, placeholder VARCHAR(128), tdefault VARCHAR(128));
     
     # table bannedformers
     # column - uid BIGINT
@@ -267,25 +267,71 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
     @app_commands.command(description="Delete a form.")
     @app_commands.describe(refid="The referral ID of the form to delete.")
     async def delete(self, interaction: discord.Interaction, refid: int):
-        form = await interaction.client.db.fetchrow("SELECT * FROM umf WHERE refid = $1", refid)
+        form = await interaction.client.db.fetchrow("SELECT * FROM forms WHERE refid = $1", refid)
         if not form:
             embed = discord.Embed(title="Form not found.", description=f"Form with referral ID {refid} could not be found.", colour=interaction.client.error)
             await interaction.followup.send(embed=embed)
         
         if form["gid"] == interaction.guild.id and interaction.user.guild_permissions.manage_guild:
-            await interaction.client.db.execute("DELETE FROM umf WHERE refid = $1", refid)
+            await interaction.client.db.execute("DELETE FROM forms WHERE refid = $1", refid)
+            await interaction.client.db.execute("DELETE FROM forminputs WHERE refid = $1", refid)
             embed = discord.Embed(title="Form deleted.", description=f"Form with referral ID {refid} has been deleted.", colour=interaction.client.accent)
             await interaction.response.send_message(embed=embed)
             return
         elif form["ownid"] == interaction.user.id:
-            await interaction.client.db.execute("DELETE FROM umf WHERE refid = $1", refid)
+            await interaction.client.db.execute("DELETE FROM forms WHERE refid = $1", refid)
+            await interaction.client.db.execute("DELETE FROM forminputs WHERE refid = $1", refid)
             embed = discord.Embed(title="Form deleted.", description=f"Form with referral ID {refid} has been deleted.", colour=interaction.client.accent)
             await interaction.response.send_message(embed=embed)
             return
 
         embed = discord.Embed(title="Permission denied.", description=f"You do not have permission to delete this form.", colour=interaction.client.error)
         await interaction.response.send_message(embed=embed)
-        
+
+    @app_commands.command(description="View all your forms.")
+    async def forms(self, interaction: discord.Interaction):
+        forms = await interaction.client.db.fetch("SELECT * FROM forms WHERE ownid = $1", interaction.user.id)
+        if not forms:
+            embed = discord.Embed(title="No forms found.", description="You do not have any forms.", colour=interaction.client.warning)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        embed = discord.Embed(title="Your forms.", description="Here are your forms.", colour=interaction.client.accent)
+        for ind, form in enumerate(forms):
+            if ind < 23:
+                embed.add_field(name=f"{form['fname']}", value=f"Referral ID: {form['refid']}")
+            else:
+                strbuild = ""
+                for moreform in forms[ind:]:
+                    strbuild += f"{moreform['fname']}: {moreform['refid']}\n"
+                embed.add_field(name=f"And {len(forms) - ind} more forms...", value=strbuild, inline=False)
+                break
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(description="View all the forms created in this server.")
+    @app_commands.checks.has_permissions(manage_guild=True)
+    async def serverforms(self, interaction: discord.Interaction):
+        forms = await interaction.client.db.fetch("SELECT * FROM forms WHERE gid = $1", interaction.guild.id)
+        if not forms:
+            embed = discord.Embed(title="No forms found.", description="There are no forms in this server.", colour=interaction.client.warning)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        embed = discord.Embed(title="Server forms.", description="Here are the forms created in this server.", colour=interaction.client.accent)
+        for ind, form in enumerate(forms):
+            if ind < 23:
+                embed.add_field(name=f"{form['fname']}", value=f"Referral ID: {form['refid']}")
+            else:
+                strbuild = ""
+                for moreform in forms[ind:]:
+                    strbuild += f"{moreform['fname']}: {moreform['refid']}\n"
+                embed.add_field(name=f"And {len(forms) - ind} more forms...", value=strbuild, inline=False)
+                break
+
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    
 
 async def setup(bot: commands.Bot):
     if bot.runmode == "p":
