@@ -26,7 +26,7 @@
 - [ ] **Password-protected categories**
     - [X] Idea
     - [X] In work
-    - [ ] Testing
+    - [X] Testing
     - [ ] Complete
 
 
