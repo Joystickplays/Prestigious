@@ -23,9 +23,9 @@
     - [X] In work
     - [X] Testing
     - [X] Complete
-- [ ] **Password-protected channel/categories**
+- [ ] **Password-protected categories**
     - [X] Idea
-    - [ ] In work
+    - [X] In work
     - [ ] Testing
     - [ ] Complete
 
