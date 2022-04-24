@@ -18,10 +18,12 @@ import time
 import random
 import traceback
 import sys
+from timeit import default_timer as inittimer
 # import json
 import warnings
 import datetime
 from cogs.ticket import CreateTicketView
+from cogs.ppc import InputPasswordV
 
 # from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -125,13 +127,18 @@ db_credentials = {
 }
 bot.db = asyncio.get_event_loop().run_until_complete(asyncpg.create_pool(**db_credentials))
 
-async def addviews():
+async def init():
+    start = inittimer()
     await bot.wait_until_ready()
 
+    # Caching
+    bot.ppcs = await bot.db.fetch("SELECT * FROM ppcs")
+
+    # Adding views
     lookup = await bot.db.fetch("SELECT * FROM irpanels")
     lookup2 = await bot.db.fetch("SELECT * FROM cfipanels")
     lookup3 = await bot.db.fetch("SELECT * FROM ticketpanels")
-
+    lookup4 = await bot.db.fetch("SELECT * FROM ppcs")
 
     for panel in lookup:
         async with bot.db.acquire() as conn:
@@ -152,12 +159,21 @@ async def addviews():
         except:
             pass
 
+    for messages in lookup4:
+        async with bot.db.acquire() as conn:
+            guild = bot.get_guild(messages["gid"])
+            if guild:
+                bot.add_view(InputPasswordV(guild), message_id=messages['messageid'])
+
+    print(f"All panels refreshed, operation took {inittimer() - start}s")
+                
+
 
 
 @bot.event
 async def on_ready():
     logger.info("Bot is ready!")
-    print("Bot is ready.")
+    print("Bot is ready, processing initialization...")
 
 @bot.event
 async def on_guild_join(guild):
@@ -611,7 +627,7 @@ async def main():
             if filename.endswith('.py') and not filename.startswith('views'):
                 await bot.load_extension(f'cogs.{filename[:-3]}')
 
-        bot.loop.create_task(addviews()) 
+        bot.loop.create_task(init()) 
         if bot.runmode == "p":
             await bot.start(os.getenv('TOKEN'))
         else:
