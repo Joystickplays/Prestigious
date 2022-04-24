@@ -455,7 +455,7 @@ async def irgroups(interaction: discord.Interaction):
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.response.send_message(embed=embed)
 
-    lookup = await bot.db.fetch("SELECT * FROM irgroups")
+    lookup = await bot.db.fetch("SELECT * FROM irgroups WHERE gid = $1", interaction.guild.id)
     if not lookup:
         embed = discord.Embed(title="No IR groups", description="There are no IR groups in this server.", color=bot.warning)
         return await interaction.response.send_message(embed=embed)
@@ -582,7 +582,7 @@ async def irlist(interaction: discord.Interaction):
         embed = discord.Embed(title="Missing permissions", description="You need the Manage Server permission to use this command.", color=bot.error)
         return await interaction.response.send_message(embed=embed)
 
-    lookup = await bot.db.fetch("SELECT * FROM irroles")
+    lookup = await bot.db.fetch("SELECT * FROM irroles WHERE gid = $1", interaction.guild.id)
     if not lookup:
         embed = discord.Embed(title="No IR roles found", description="There are no IR roles in this server.", color=bot.warning)
         return await interaction.response.send_message(embed=embed)
