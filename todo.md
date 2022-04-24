@@ -23,11 +23,11 @@
     - [X] In work
     - [X] Testing
     - [X] Complete
-- [ ] **Password-protected categories**
+- [X] **Password-protected categories**
     - [X] Idea
     - [X] In work
     - [X] Testing
-    - [ ] Complete
+    - [X] Complete
 
 
 *If you have any more ideas on what to add please add it here~*
