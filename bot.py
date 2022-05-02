@@ -165,8 +165,7 @@ async def init():
             if guild:
                 bot.add_view(InputPasswordV(guild), message_id=messages['messageid'])
 
-    print(f"All panels refreshed, operation took {inittimer() - start}s")
-                
+    print(f"All panels refreshed, operation took {inittimer() - start}s")                
 
 
 
