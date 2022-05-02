@@ -28,6 +28,11 @@
     - [X] In work
     - [X] Testing
     - [X] Complete
+- [ ] **TopperFriends** (find friends with the same interests as you)
+    - [X] Idea
+    - [ ] In work
+    - [ ] Testing
+    - [ ] Complete
 
 
 *If you have any more ideas on what to add please add it here~*
