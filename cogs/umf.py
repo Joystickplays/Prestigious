@@ -16,7 +16,10 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
     # column - gid BIGINT
     # column - refid INT
     # column - ownid BIGINT
-    # CREATE TABLE forms (fname VARCHAR(100), gid BIGINT, refid INT, ownid BIGINT);
+    # column - private BOOL
+    # column - guildonly BOOL
+    # column - maxtaken INT
+    # CREATE TABLE forms (fname VARCHAR(100), gid BIGINT, refid INT, ownid BIGINT, private BOOL, guildonly BOOL, maxtaken INT);
 
     # table forminputs
     # column - refid INT
@@ -308,6 +311,22 @@ class UserMadeForms(commands.Cog, app_commands.Group, name="umf"):
                 break
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(description="Modify a form's settings.")
+    @app_commands.describe(refid="The referral ID of the form to modify.")
+    async def fsettings(self, interaction: discord.Interaction, refid: int):
+        form = await interaction.client.db.fetchrow("SELECT * FROM forms WHERE refid = $1", refid)
+        if not form:
+            embed = discord.Embed(title="Form not found.", description=f"Form with referral ID {refid} could not be found.", colour=interaction.client.error)
+            await interaction.followup.send(embed=embed)
+            return
+            
+        if form["ownid"] != interaction.user.id:
+            embed = discord.Embed(title="Permission denied.", description=f"You do not have permission to modify this form.", colour=interaction.client.error)
+            await interaction.response.send_message(embed=embed)
+            return
+
+       # way too lazy
 
     @app_commands.command(description="View all the forms created in this server.")
     @app_commands.checks.has_permissions(manage_guild=True)
